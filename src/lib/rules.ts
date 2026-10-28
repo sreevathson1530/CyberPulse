@@ -63,7 +63,7 @@ export const RULES: RuleDef[] = [
     name: 'Hidden mail forwarding',
     detects: 'Inbox silently copying mail outside',
     severity: 'critical',
-    stage: 'Persistence',
+    stage: 'Collection',
     mitre: 'T1114.003',
     tactic: 'Collection',
   },

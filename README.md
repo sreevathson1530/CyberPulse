@@ -6,6 +6,10 @@ Built for **DEXATHON 2026** by **Team QUADRAX** (team DEX26335), theme: Cybersec
 
 ![The verdict after the account takeover scenario](docs/verdict.png)
 
+Live demo: **https://cyberpulse-five-zeta.vercel.app**
+
+Start with `?scenario=takeover&t=end` to land on a finished incident, or open the root and press play.
+
 ## The problem
 
 A small business does not get attacked by one dramatic event. It gets attacked by a chain of ordinary-looking ones: a few failed passwords, a sign-in from a new device, a mail rule nobody remembers creating, an admin role granted after hours. Each event alone is a shrug. Together they are an attack, and nobody is watching.
@@ -67,7 +71,7 @@ synthetic logs  ->  detect  ->  connect  ->  score  ->  explain  ->  respond
 | New device sign-in | A device this account never used | Medium | Initial access | T1078 |
 | MFA fatigue | Repeated push denials, then one approval | High | Credential access | T1621 |
 | Risky app consent | A new app granted mail access | High | Persistence | T1528 |
-| Hidden mail forwarding | Inbox silently copying mail outside | Critical | Persistence | T1114.003 |
+| Hidden mail forwarding | Inbox silently copying mail outside | Critical | Collection | T1114.003 |
 | Admin rights granted | A normal account made an admin | Critical | Privilege escalation | T1098.003 |
 | Mass file download | Downloads far above the account norm | High | Collection | T1039 |
 | File shared to free mail | A company file sent to personal mail | High | Exfiltration | T1567.002 |
