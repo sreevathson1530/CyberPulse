@@ -66,7 +66,7 @@ export function buildStory(incident: CorrelatedIncident): Story {
     } touched ${accountText}. Read in order, they are one attack.`,
     beats: incident.alerts.map((a) => ({ ts: a.ts, text: beatFor(a) })),
     why,
-    next: 'Work down the list beside this panel. Every action is reversible and simulated here, so nothing outside this demo changes.',
+    next: 'Work down the list below. Every action is reversible and simulated here, so nothing outside this demo changes.',
     confidence: `Score is ${incident.basePoints} severity points plus ${incident.stageBonus} for linked stages. Every link below prints its own reason.`,
   }
 }

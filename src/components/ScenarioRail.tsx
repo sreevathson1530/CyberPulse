@@ -14,7 +14,8 @@ interface Props {
 
 export function ScenarioRail({ scenarioId, scenario, sim, onSelect }: Props) {
   return (
-    <aside className="flex flex-col gap-3">
+    // Below xl the rail dissolves into the page grid so the rule list can drop under the verdict.
+    <aside className="flex flex-col gap-3 max-xl:contents">
       <section className="panel p-3">
         <div className="flex items-center justify-between">
           <span className="label">Scenario</span>
@@ -113,7 +114,7 @@ export function ScenarioRail({ scenarioId, scenario, sim, onSelect }: Props) {
         </div>
       </section>
 
-      <section className="panel p-3">
+      <section className="panel p-3 max-xl:order-last">
         <div className="flex items-center justify-between">
           <span className="label">Rules armed</span>
           <span className="num text-[10px] text-ink-3">10 active</span>

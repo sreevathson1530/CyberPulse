@@ -121,7 +121,7 @@ export default function App() {
                 </span>
               </div>
 
-              <div className="max-h-[calc(100dvh-336px)] min-h-[340px] overflow-y-auto">
+              <div className="min-h-[340px] xl:max-h-[calc(100dvh-336px)] xl:overflow-y-auto">
                 {tab === 'timeline' && (
                   <Timeline
                     incident={incident}
