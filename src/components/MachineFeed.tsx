@@ -13,12 +13,12 @@ export function MachineFeed({ events, alerts }: Props) {
   const rows = [...events].slice(-44).reverse()
 
   return (
-    <div className="bg-night">
+    <div className="flex min-h-[340px] flex-col bg-night">
       <div className="flex items-center justify-between border-b border-night-3 px-3 py-2">
         <span className="label text-[9px] text-paper-3/50">Machine feed, raw events</span>
         <span className="num text-[9.5px] text-paper-3/40">{events.length} received</span>
       </div>
-      <div className="overflow-x-auto px-3 py-2">
+      <div className="flex-1 overflow-x-auto px-3 py-2">
         <div className="space-y-[2px] font-mono text-[10.5px] leading-[1.45]">
           {rows.map((e) => {
             const hot = flagged.has(e.id)
@@ -49,7 +49,7 @@ export function MachineFeed({ events, alerts }: Props) {
           )}
         </div>
       </div>
-      <div className="flex items-center justify-between border-t border-night-3 px-3 py-2">
+      <div className="mt-auto flex items-center justify-between border-t border-night-3 px-3 py-2">
         <span className="text-[9.5px] text-paper-3/35">
           Synthetic data only. Documentation IP ranges, .example domains.
         </span>
