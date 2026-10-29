@@ -1,5 +1,5 @@
 @echo off
-title CyberPulse SOC Platform
+title CyberPulse
 echo.
 echo  ====================================================
 echo   CyberPulse - Early-Warning Cyber Incident Linker
@@ -18,7 +18,7 @@ if not exist ".venv\Scripts\streamlit.exe" (
     echo.
 )
 
-echo [*] Launching CyberPulse SOC Dashboard...
+echo [*] Launching CyberPulse...
 echo [*] Open http://localhost:8501 in your browser.
 echo.
 

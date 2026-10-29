@@ -1,0 +1,21 @@
+[project]
+name = "cyberpulse"
+version = "1.0.0"
+description = "Early warning for small businesses: suspicious log events, linked into one incident and explained in plain English."
+requires-python = ">=3.11"
+dependencies = [
+    "streamlit>=1.66",
+    "pandas>=2.2",
+    "plotly>=5.24",
+]
+
+[dependency-groups]
+dev = ["pytest>=8.0"]
+
+# Vercel would otherwise look for an `app` object in app.py, which is the
+# Streamlit script itself. asgi.py wraps it as an ASGI app.
+[tool.vercel]
+entrypoint = "asgi:app"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
