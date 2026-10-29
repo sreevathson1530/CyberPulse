@@ -1,10 +1,20 @@
 [theme]
-base = "dark"
-primaryColor = "#38BDF8"
-backgroundColor = "#0B0F19"
-secondaryBackgroundColor = "#0F172A"
-textColor = "#F1F5F9"
-font = "sans serif"
+base = "light"
+primaryColor = "#16181D"
+backgroundColor = "#F7F7F5"
+secondaryBackgroundColor = "#F1F0ED"
+textColor = "#16181D"
+linkColor = "#2F5FD0"
+borderColor = "#E3E2DE"
+showWidgetBorder = true
+baseRadius = "8px"
+buttonRadius = "8px"
+baseFontSize = 15
+headingFontWeights = 600
+font = "Geist:https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&display=swap"
+codeFont = "Geist Mono:https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500&display=swap"
+dataframeHeaderBackgroundColor = "#F7F7F5"
+dataframeBorderColor = "#ECEBE7"
 
 [server]
 headless = true
