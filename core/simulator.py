@@ -29,6 +29,8 @@ from pathlib import Path
 
 import pandas as pd
 
+from core import schema
+
 SEED = 42
 DAY = date(2026, 3, 10)  # a Tuesday
 OFFICE_IP = "203.0.113.10"  # shared by everyone in the office (rules must ignore it)
@@ -37,30 +39,13 @@ ATTACKER_DEVICE = "UNKNOWN-DEV-7731"
 ATTACKER_COUNTRY = "Romania"
 FORWARD_ADDRESS = "anita.backup@mailbox-forward.example"
 
-# One log event = one row with exactly these columns. Keep in sync with core/schema.py.
-COLUMNS = [
-    "event_id",   # E0001, E0002 ... in time order
-    "timestamp",  # datetime
-    "user",       # employee email
-    "ip",         # source IP address
-    "device",     # device name
-    "country",    # country of the login or action
-    "action",     # see ACTIONS below
-    "detail",     # free text, e.g. file name or forwarding address
-    "label",      # "normal" or "attack"   (answer key, the backend must NOT use it)
+# One log event = one row in the format agreed in core/schema.py, plus two
+# columns only the simulator knows. Actions come from schema.ACTIONS.
+COLUMNS = schema.COLUMNS + [
     "stage",      # attack step name, empty for normal events
     "note",       # why a normal event looks odd, empty otherwise
 ]
-
-ACTIONS = [
-    "login_success",
-    "login_failed",
-    "logout",
-    "file_open",
-    "email_sent",
-    "admin_granted",
-    "mail_rule_created",
-]
+FILES_PER_DAY = 195  # each person opens 170 to 220 files on a normal day
 
 
 # --------------------------------------------------------------------------
@@ -94,6 +79,16 @@ EMPLOYEES = [
 ]
 BY_NAME = {e.name.split()[0].lower(): e for e in EMPLOYEES}
 
+
+def employee_profiles() -> list[schema.Employee]:
+    """What is normal for each person, in the shape the detection rules read."""
+    return [
+        schema.Employee(email=e.email, name=e.name, device=e.device, country=e.country,
+                        work_start=e.start_hour, work_end=e.end_hour,
+                        is_admin=e.team == "IT Admin", files_per_day=FILES_PER_DAY)
+        for e in EMPLOYEES
+    ]
+
 FILE_NAMES = {
     "Finance":     ["invoice_{n}.pdf", "ledger_{n}.xlsx", "payroll_{n}.xlsx", "budget_{n}.xlsx"],
     "Sales":       ["lead_list_{n}.xlsx", "proposal_{n}.docx", "quote_{n}.pdf"],
@@ -114,7 +109,7 @@ def _at(hour: float) -> datetime:
 
 
 def _event(ts, emp_or_user, action, *, ip=None, device=None, country=None,
-           detail="", label="normal", stage="", note="") -> dict:
+           outcome="success", target="", label="normal", stage="", note="") -> dict:
     """Build one event row. `emp_or_user` is an Employee or a plain email."""
     if isinstance(emp_or_user, Employee):
         user = emp_or_user.email
@@ -125,13 +120,15 @@ def _event(ts, emp_or_user, action, *, ip=None, device=None, country=None,
         user = emp_or_user
     return {
         "event_id": "",
-        "timestamp": ts,
+        "time": ts,
         "user": user,
         "ip": ip,
         "device": device,
         "country": country,
         "action": action,
-        "detail": detail,
+        "outcome": outcome,
+        "target": target,
+        "size_mb": 0.0,
         "label": label,
         "stage": stage,
         "note": note,
@@ -150,18 +147,18 @@ def _normal_events(rng: random.Random) -> list[dict]:
     for emp in EMPLOYEES:
         login_at = _at(emp.start_hour + rng.uniform(-0.25, 0.4))
         logout_at = _at(emp.end_hour + rng.uniform(-0.3, 0.3))
-        events.append(_event(login_at, emp, "login_success"))
+        events.append(_event(login_at, emp, "login"))
 
         work_start, work_end = login_at + timedelta(minutes=3), logout_at
         span = (work_end - work_start).total_seconds()
 
         for _ in range(rng.randint(170, 220)):
             ts = work_start + timedelta(seconds=rng.uniform(0, span))
-            events.append(_event(ts, emp, "file_open", detail=_random_file(rng, emp)))
+            events.append(_event(ts, emp, "file_open", target=_random_file(rng, emp)))
         for _ in range(rng.randint(35, 55)):
             ts = work_start + timedelta(seconds=rng.uniform(0, span))
             recipient = rng.choice(EMPLOYEES).email
-            events.append(_event(ts, emp, "email_sent", detail=f"to {recipient}"))
+            events.append(_event(ts, emp, "email_send", target=recipient))
 
         events.append(_event(logout_at, emp, "logout"))
     return events
@@ -177,47 +174,45 @@ def _harmless_odd_events(rng: random.Random) -> list[dict]:
     karthik = BY_NAME["karthik"]
 
     # 1. Someone travelling: Priya logs in from Singapore on her usual laptop.
-    events.append(_event(_at(11.2), priya, "login_success", ip="203.0.113.150",
+    events.append(_event(_at(11.2), priya, "login", ip="203.0.113.150",
                          country="Singapore",
                          note="harmless: Priya is travelling for a conference"))
 
     # 2. Forgotten password: Ravi fails 3 times, then gets in.
     for i, minute in enumerate([0, 1, 2]):
-        events.append(_event(_at(9.9) + timedelta(minutes=minute), ravi, "login_failed",
-                             detail="wrong password",
+        events.append(_event(_at(9.9) + timedelta(minutes=minute), ravi, "login", outcome="failure",
                              note="harmless: Ravi forgot his password"))
-    events.append(_event(_at(9.9) + timedelta(minutes=4), ravi, "login_success",
+    events.append(_event(_at(9.9) + timedelta(minutes=4), ravi, "login",
                          note="harmless: Ravi forgot his password"))
 
     # 3. IT admin gives rights during work hours, with a ticket.
     events.append(_event(_at(11.5), mohan, "admin_granted",
-                         detail=f"granted admin to {karthik.email}, IT ticket #4821",
-                         note="harmless: planned change by the IT admin"))
+                         target=karthik.email,
+                         note="harmless: planned change by the IT admin, IT ticket #4821"))
 
     # 4. Late evening login from the usual laptop.
-    events.append(_event(_at(21.4), divya, "login_success",
+    events.append(_event(_at(21.4), divya, "login",
                          note="harmless: Divya finishing a late task"))
     for _ in range(6):
         events.append(_event(_at(21.45) + timedelta(minutes=rng.randint(0, 20)),
-                             divya, "file_open", detail=_random_file(rng, divya),
+                             divya, "file_open", target=_random_file(rng, divya),
                              note="harmless: Divya finishing a late task"))
     events.append(_event(_at(21.9), divya, "logout",
                          note="harmless: Divya finishing a late task"))
 
     # 5. New laptop for Sana (new device, same person, same office).
-    events.append(_event(_at(10.3), sana, "login_success", device="LAPTOP-SANA-NEW",
+    events.append(_event(_at(10.3), sana, "login", device="LAPTOP-SANA-NEW",
                          note="harmless: Sana received a replacement laptop"))
 
     # 6. Month-end rush: Arjun opens 60 extra files in half an hour.
     for _ in range(60):
         ts = _at(15.0) + timedelta(seconds=rng.uniform(0, 30 * 60))
-        events.append(_event(ts, arjun, "file_open", detail=_random_file(rng, arjun),
+        events.append(_event(ts, arjun, "file_open", target=_random_file(rng, arjun),
                              note="harmless: month-end stock report"))
 
     # 7. Anita mistypes her password twice (not 5).
     for minute in (0, 1):
-        events.append(_event(_at(9.4) + timedelta(minutes=minute), anita, "login_failed",
-                             detail="wrong password",
+        events.append(_event(_at(9.4) + timedelta(minutes=minute), anita, "login", outcome="failure",
                              note="harmless: Anita mistyped her password"))
     return events
 
@@ -234,33 +229,33 @@ def _account_takeover_events(rng: random.Random) -> list[dict]:
     t = _at(13.67)  # 13:40
     for name in ("ravi", "divya", "karthik", "sana"):
         victim = BY_NAME[name]
-        events.append(_event(t, victim.email, "login_failed", device=ATTACKER_DEVICE,
-                             country=ATTACKER_COUNTRY, detail="wrong password",
+        events.append(_event(t, victim.email, "login", outcome="failure", device=ATTACKER_DEVICE,
+                             country=ATTACKER_COUNTRY,
                              stage="password_spray", **atk))
         t += timedelta(seconds=rng.randint(40, 70))
 
     # Stage 2: password guessing on Anita, 6 failures in 7 minutes (rule: 5 in 10 min).
     t = _at(13.75)  # 13:45
     for _ in range(6):
-        events.append(_event(t, anita.email, "login_failed", device=ATTACKER_DEVICE,
-                             country=ATTACKER_COUNTRY, detail="wrong password",
+        events.append(_event(t, anita.email, "login", outcome="failure", device=ATTACKER_DEVICE,
+                             country=ATTACKER_COUNTRY,
                              stage="password_guessing", **atk))
         t += timedelta(seconds=rng.randint(55, 80))
 
     # Stage 3: the guess works, from a device and country she has never used.
-    events.append(_event(_at(13.88), anita.email, "login_success", device=ATTACKER_DEVICE,
+    events.append(_event(_at(13.88), anita.email, "login", device=ATTACKER_DEVICE,
                          country=ATTACKER_COUNTRY, stage="new_device_login", **atk))
 
     # Stage 4: hidden mail-forwarding rule to an outside address.
-    events.append(_event(_at(13.97), anita.email, "mail_rule_created", device=ATTACKER_DEVICE,
+    events.append(_event(_at(13.97), anita.email, "mail_forward_rule", device=ATTACKER_DEVICE,
                          country=ATTACKER_COUNTRY,
-                         detail=f"forward all mail to {FORWARD_ADDRESS}",
+                         target=FORWARD_ADDRESS,
                          stage="mail_forwarding_rule", **atk))
 
     # Stage 5: the account makes itself admin.
     events.append(_event(_at(14.05), anita.email, "admin_granted", device=ATTACKER_DEVICE,
                          country=ATTACKER_COUNTRY,
-                         detail=f"self-granted admin to {anita.email}",
+                         target=anita.email,
                          stage="made_admin", **atk))
 
     # Stage 6: mass file opening, 150 files in 10 minutes. This is the damage.
@@ -269,7 +264,7 @@ def _account_takeover_events(rng: random.Random) -> list[dict]:
         ts = start + timedelta(seconds=i * 4 + rng.uniform(0, 2))
         events.append(_event(ts, anita.email, "file_open", device=ATTACKER_DEVICE,
                              country=ATTACKER_COUNTRY,
-                             detail=_random_file(rng, anita), stage="mass_download", **atk))
+                             target=_random_file(rng, anita), stage="mass_download", **atk))
     return events
 
 
@@ -290,7 +285,7 @@ def build_scenario(name: str = "normal_day") -> pd.DataFrame:
         events += _account_takeover_events(rng)
 
     df = pd.DataFrame(events, columns=COLUMNS)
-    df = df.sort_values("timestamp", kind="stable").reset_index(drop=True)
+    df = df.sort_values("time", kind="stable").reset_index(drop=True)
     df["event_id"] = [f"E{i:04d}" for i in range(1, len(df) + 1)]
     return df
 
@@ -298,7 +293,7 @@ def build_scenario(name: str = "normal_day") -> pd.DataFrame:
 def damage_start_time(df: pd.DataFrame):
     """When the real damage begins (first mass download). None for a normal day."""
     hit = df[df["stage"] == "mass_download"]
-    return None if hit.empty else hit["timestamp"].min()
+    return None if hit.empty else hit["time"].min()
 
 
 # --------------------------------------------------------------------------
@@ -307,7 +302,7 @@ def damage_start_time(df: pd.DataFrame):
 def sample_warnings(df: pd.DataFrame) -> list[dict]:
     """Warnings roughly as the six rules would produce them, for the takeover story.
 
-    Each warning: id, rule, severity, user, ip, device, timestamp, event_ids,
+    Each warning: id, rule, severity, user, ip, device, time, event_ids,
     plus `is_attack` (answer key) so linking tests can check the outcome.
     """
     def ids(stage):
@@ -326,7 +321,7 @@ def sample_warnings(df: pd.DataFrame) -> list[dict]:
         base = {
             "warning_id": f"W{n:03d}", "rule": rule, "severity": severity,
             "user": row["user"], "ip": row["ip"], "device": row["device"],
-            "timestamp": row["timestamp"].isoformat(), "event_ids": event_ids,
+            "time": row["time"].isoformat(), "event_ids": event_ids,
             "is_attack": is_attack,
         }
         base.update(over)

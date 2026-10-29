@@ -31,6 +31,7 @@ ATTACK_KINDS = [
     "Account takeover",
     "Email forwarding",
     "Data theft",
+    "Unusual file activity",
     "Password guessing",
     "New admin",
     "Unusual login",
@@ -106,6 +107,24 @@ def analyze(events, employees=None, office_ips=OFFICE_IPS) -> list[Incident]:
     return sorted(incidents, key=lambda incident: (-incident.score, incident.start))
 
 
+def danger_over_time(events, employees=None, office_ips=OFFICE_IPS) -> pd.DataFrame:
+    """The top danger score each time it changed: one row per moment a new
+    warning sign appeared, with columns time, score and level.
+
+    Rules and linking only look backwards, so the signs up to any moment are
+    exactly the ones a live replay would have shown by then.
+    """
+    signs = sorted(detect(events, employees, office_ips), key=lambda sign: sign.time)
+    rows = []
+    for n, sign in enumerate(signs, start=1):
+        if n < len(signs) and signs[n].time == sign.time:
+            continue  # several signs at the same moment count once
+        score = max(danger_score(group) for group in link(signs[:n], office_ips))
+        if not rows or rows[-1]["score"] != score:
+            rows.append({"time": sign.time, "score": score, "level": danger_level(score)})
+    return pd.DataFrame(rows, columns=["time", "score", "level"])
+
+
 def link(signs, office_ips=OFFICE_IPS, window=LINK_WINDOW) -> list[list]:
     """Group warning signs that share a person, IP address or device within
     `window` of each other. A chain counts: if A links to B and B to C, all
@@ -166,8 +185,10 @@ def attack_kind(signs) -> str:
         return "Account takeover"
     if "external_forwarding" in rules:
         return "Email forwarding"
-    if rules & {"mass_file_access", "big_upload"}:
+    if "big_upload" in rules:
         return "Data theft"
+    if "mass_file_access" in rules:
+        return "Unusual file activity"
     if rules & {"brute_force", "password_spray", "login_after_failures"}:
         return "Password guessing"
     if "made_admin" in rules:

@@ -84,7 +84,7 @@ class Detector:
         # Recent events for the rules that count, oldest first.
         self.failures_by_user = defaultdict(deque)  # (time, event_id)
         self.failures_by_ip = defaultdict(deque)    # (time, user, event_id)
-        self.files_by_user = defaultdict(deque)     # (time, event_id)
+        self.files_by_user = defaultdict(deque)     # per (user, device): (time, event_id)
         self.uploads_by_user = defaultdict(deque)   # (time, size_mb, event_id)
         self.renames_by_user = defaultdict(deque)   # (time, event_id)
 
@@ -188,14 +188,16 @@ class Detector:
         return self._raise("made_admin", target, e, severity, detail, [e.event_id], users=_unique([e.user, target]))
 
     def _mass_file_access(self, e):
-        """Rule 6: far more files opened than the person's normal day."""
-        recent = self.files_by_user[e.user]
+        """Rule 6: far more files opened than the person's normal day.
+        Counted per device, so the real person working on their own laptop
+        is kept apart from an intruder using their account elsewhere."""
+        recent = self.files_by_user[(e.user, e.device)]
         _remember(recent, (e.time, e.event_id), e.time, FILE_WINDOW)
         if len(recent) < self._file_limit(e.user):
             return []
-        detail = (f"{e.user} opened or downloaded {len(recent)} files within "
+        detail = (f"{e.user} opened or downloaded {len(recent)} files on {e.device} within "
                   f"{_minutes(FILE_WINDOW)}, far more than usual.")
-        return self._raise("mass_file_access", e.user, e, "High", detail, [eid for _, eid in recent])
+        return self._raise("mass_file_access", (e.user, e.device), e, "High", detail, [eid for _, eid in recent])
 
     # The four extra rules
 

@@ -6,7 +6,7 @@
     "user": null,
     "ip": "203.0.113.99",
     "device": "UNKNOWN-DEV-7731",
-    "timestamp": "2026-03-10T13:40:12",
+    "time": "2026-03-10T13:40:12",
     "event_ids": [
       "E1013",
       "E1016",
@@ -22,7 +22,7 @@
     "user": "anita.rao@cyberpulse.example",
     "ip": "203.0.113.99",
     "device": "UNKNOWN-DEV-7731",
-    "timestamp": "2026-03-10T13:45:00",
+    "time": "2026-03-10T13:45:00",
     "event_ids": [
       "E1032",
       "E1037",
@@ -40,7 +40,7 @@
     "user": "anita.rao@cyberpulse.example",
     "ip": "203.0.113.99",
     "device": "UNKNOWN-DEV-7731",
-    "timestamp": "2026-03-10T13:52:48",
+    "time": "2026-03-10T13:52:48",
     "event_ids": [
       "E1072"
     ],
@@ -53,7 +53,7 @@
     "user": "anita.rao@cyberpulse.example",
     "ip": "203.0.113.99",
     "device": "UNKNOWN-DEV-7731",
-    "timestamp": "2026-03-10T13:52:48",
+    "time": "2026-03-10T13:52:48",
     "event_ids": [
       "E1072"
     ],
@@ -66,7 +66,7 @@
     "user": "anita.rao@cyberpulse.example",
     "ip": "203.0.113.99",
     "device": "UNKNOWN-DEV-7731",
-    "timestamp": "2026-03-10T14:03:00",
+    "time": "2026-03-10T14:03:00",
     "event_ids": [
       "E1115"
     ],
@@ -79,7 +79,7 @@
     "user": "anita.rao@cyberpulse.example",
     "ip": "203.0.113.99",
     "device": "UNKNOWN-DEV-7731",
-    "timestamp": "2026-03-10T14:17:44.958217",
+    "time": "2026-03-10T14:17:44.958217",
     "event_ids": [
       "E1142",
       "E1143",
@@ -241,7 +241,7 @@
     "user": "priya.sharma@cyberpulse.example",
     "ip": "203.0.113.150",
     "device": "LAPTOP-PRIYA",
-    "timestamp": "2026-03-10T11:12:00",
+    "time": "2026-03-10T11:12:00",
     "event_ids": [
       "E0400"
     ],
