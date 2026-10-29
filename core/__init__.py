@@ -1,5 +1,2 @@
-"""CyberPulse Core Module.
-
-Provides incident detection fallbacks, mock scenario data generation,
-and mitigation response state management.
-"""
+"""CyberPulse core: the log format, simulator, detection rules, linking and
+scoring, explanations, metrics and shared screen pieces."""

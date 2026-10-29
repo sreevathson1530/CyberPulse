@@ -8,5 +8,7 @@ font = "sans serif"
 
 [server]
 headless = true
-enableCORS = false
-enableXsrfProtection = false
+
+[client]
+showSidebarNavigation = false
+toolbarMode = "minimal"
