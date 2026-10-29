@@ -86,6 +86,7 @@ class Incident:
             "users": ", ".join(sign.users),
             "ip": sign.ip,
             "device": sign.device,
+            "country": sign.country,
             "detail": sign.detail,
         } for sign in self.signs])
 

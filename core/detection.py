@@ -63,6 +63,7 @@ class WarningSign:
     device: str
     detail: str           # one plain-English sentence
     event_ids: list[str] = field(default_factory=list)  # the evidence
+    country: str = ""
 
 
 class Detector:
@@ -80,11 +81,13 @@ class Detector:
         for e in self.profiles.values():
             self.known_devices[e.email].add(e.device)
             self.known_countries[e.email].add(e.country)
+        # Each person's own laptop: from their profile, else their first login.
+        self.home_device = {e.email: e.device for e in self.profiles.values()}
 
         # Recent events for the rules that count, oldest first.
         self.failures_by_user = defaultdict(deque)  # (time, event_id)
         self.failures_by_ip = defaultdict(deque)    # (time, user, event_id)
-        self.files_by_user = defaultdict(deque)     # per (user, device): (time, event_id)
+        self.files_by_user = defaultdict(deque)     # (time, event_id, device)
         self.uploads_by_user = defaultdict(deque)   # (time, size_mb, event_id)
         self.renames_by_user = defaultdict(deque)   # (time, event_id)
 
@@ -155,6 +158,8 @@ class Detector:
         """Rule 4: a login from a device or country the person has never used."""
         devices, countries = self.known_devices[e.user], self.known_countries[e.user]
         nothing_to_compare = not devices  # no profile and no earlier login
+        if nothing_to_compare:
+            self.home_device[e.user] = e.device
         new_device, new_country = e.device not in devices, e.country not in countries
         devices.add(e.device)
         countries.add(e.country)
@@ -189,15 +194,24 @@ class Detector:
 
     def _mass_file_access(self, e):
         """Rule 6: far more files opened than the person's normal day.
-        Counted per device, so the real person working on their own laptop
-        is kept apart from an intruder using their account elsewhere."""
-        recent = self.files_by_user[(e.user, e.device)]
-        _remember(recent, (e.time, e.event_id), e.time, FILE_WINDOW)
+
+        Counted per account, so switching devices cannot split the count. When
+        other devices are involved, the person's own laptop is left out of the
+        evidence, so their real work is not blamed on an intruder."""
+        recent = self.files_by_user[e.user]
+        _remember(recent, (e.time, e.event_id, e.device), e.time, FILE_WINDOW)
         if len(recent) < self._file_limit(e.user):
             return []
-        detail = (f"{e.user} opened or downloaded {len(recent)} files on {e.device} within "
+        home = self.home_device.get(e.user)
+        elsewhere = [(eid, device) for _, eid, device in recent if device != home]
+        detail = (f"{e.user} opened or downloaded {len(recent)} files within "
                   f"{_minutes(FILE_WINDOW)}, far more than usual.")
-        return self._raise("mass_file_access", (e.user, e.device), e, "High", detail, [eid for _, eid in recent])
+        if home and elsewhere:
+            devices = _unique(device for _, device in elsewhere)
+            others = ", ".join(devices) if len(devices) <= 3 else f"{len(devices)} other devices"
+            detail += f" {len(elsewhere)} of them came from {others}, not their usual laptop."
+        evidence = [eid for eid, _ in elsewhere] if home and elsewhere else [eid for _, eid, _ in recent]
+        return self._raise("mass_file_access", e.user, e, "High", detail, evidence)
 
     # The four extra rules
 
@@ -246,7 +260,7 @@ class Detector:
             return []
         sign = WarningSign(rule=rule, step=step or RULES[rule], severity=severity, time=e.time,
                            users=[e.user] if users is None else users, ip=e.ip, device=e.device,
-                           detail=detail, event_ids=_unique(event_ids))
+                           detail=detail, event_ids=_unique(event_ids), country=e.country)
         self.last_sign[(rule, key)] = sign
         return [sign]
 
