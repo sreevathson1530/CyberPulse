@@ -3,7 +3,7 @@
   "framework": "python",
   "functions": {
     "asgi.py": {
-      "excludeFiles": "{tests/**,data/**,run.bat,README.md}"
+      "excludeFiles": "{tests/**,data/**,tools/**,run.bat,README.md}"
     }
   }
 }

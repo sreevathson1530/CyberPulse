@@ -1,4 +1,4 @@
-# CyberPulse 🛡️
+# CyberPulse
 
 **Early warning for small businesses.** CyberPulse reads a company's sign-in, file and email logs, spots
 suspicious events, links the ones that belong to the same attack into one incident, scores how dangerous it
@@ -8,13 +8,18 @@ DEXATHON 2026 · Team QUADRAX
 
 ## What you see
 
-- **Live dashboard** (`app.py`): plays a day of logs event by event. Pick *Normal day* or press
-  **🚨 Launch attack** to watch an account takeover unfold. The danger meter climbs from Watch to
+- **Product tour** (`core/tour.py`): eight slides that open on a visitor's first visit. Each one is a
+  screenshot of the real app with numbered arrows on the buttons it explains. It can be reopened from
+  **Product tour** at the top right of every page.
+- **Live monitor** (`views/monitor.py`): plays a day of logs event by event. Pick *Normal day* or press
+  **Run attack demo** to watch an account takeover unfold. The danger score climbs from Watch to
   Suspicious to Likely attack, the warning signs appear on a timeline, the story explains what happened,
   and the response buttons (pretend) appear once it is worth acting.
-- **Evidence** (`pages/1_Incident_Details.py`): the raw events behind each incident, filtered by person,
+- **Evidence** (`views/evidence.py`): the raw events behind each incident, filtered by person,
   IP address or device, with a CSV download.
-- **Score card** (`pages/2_Scorecard.py`): measured live against the answer key in the simulated data.
+- **Score card** (`views/scorecard.py`): measured live against the answer key in the simulated data.
+
+`app.py` is the entry point: it sets up the theme, the top navigation and the tour, then runs the page.
 
 | Measured on the simulated company | Result |
 |---|---|
@@ -34,8 +39,8 @@ python -m venv .venv
 
 Or double-click `run.bat` on Windows. Then open http://localhost:8501.
 
-Run the tests (81 of them: every rule, linking and scoring, the whole demo story, the explanations and the
-screens):
+Run the tests (86 of them: every rule, linking and scoring, the whole demo story, the explanations, the
+screens and the tour):
 
 ```bash
 .venv\Scripts\python -m pytest
@@ -50,7 +55,7 @@ core/simulator.py ──► core/schema.py ──► core/detection.py ──►
                                                                         │
                                               core/metrics.py ◄─────────┤
                                               score card vs answer key  ▼
-                                                              app.py and pages/ (core/ui.py, core/response.py)
+                                                     app.py and views/ (core/ui.py, core/tour.py, core/response.py)
 ```
 
 1. **Detection** reads events in time order, as they would arrive. Ten rules:
@@ -81,13 +86,23 @@ core/simulator.py ──► core/schema.py ──► core/detection.py ──►
 |---|---|---|
 | Sreevathson (lead) | Backend: log format, rules, linking, scoring | `core/schema.py`, `core/detection.py`, `core/correlation.py` |
 | Harish | Simulated company and score card numbers | `core/simulator.py`, `core/metrics.py`, `data/` |
-| Aswin | Screens | `app.py`, `pages/`, `core/ui.py`, `core/response.py`, `.streamlit/` |
+| Aswin | Screens and product tour | `app.py`, `views/`, `core/ui.py`, `core/tour.py`, `core/response.py`, `assets/`, `.streamlit/` |
 | Keerthana | Explanations, tests and presentation | `core/explain.py`, `tests/` |
 
 ## Safe data only
 
 Everything is made up: IP addresses come only from the 203.0.113.x documentation range and emails end in
 `.example`. The response buttons change nothing real.
+
+## Design
+
+Light theme with one accent: ink text and buttons, Geist and Geist Mono fonts (`.streamlit/config.toml`).
+Status colours are kept for status only (green Clear, amber Watch, orange Suspicious, red Likely attack),
+and each status always comes with an icon and a label. The shared styles live in `core/ui.py`.
+
+The tour screenshots in `assets/tour/` are made from the running app. After a screen changes, remake them:
+run the app on port 8601, run `tools/tour_shots.js` with Playwright (the script says how), then
+`.venv\Scripts\python tools/tour_webp.py`.
 
 ## Hosting
 
