@@ -4,9 +4,12 @@ Owner: Aswin Kumaran (frontend). Every page imports this, so the colours and
 the playback position are the same everywhere.
 """
 
+import base64
 from datetime import datetime, time, timedelta
+from html import escape
 
 import streamlit as st
+import streamlit.components.v1 as components
 
 from core.correlation import analyze
 from core.metrics import score_card as compute_score_card
@@ -90,6 +93,24 @@ def sidebar():
         st.divider()
         st.caption("All data is simulated: a made-up company of 8 people, test-range IP addresses "
                    "(203.0.113.x) and .example emails. Response buttons are pretend.")
+
+
+def download_csv(table, file_name, label):
+    """A download button for a table, with the file inside the page.
+
+    st.download_button fetches the file from the server's memory in a second
+    request. On Vercel that request can reach a different server instance,
+    which answers 404, so the file travels with the page instead."""
+    data = base64.b64encode(table.to_csv(index=False).encode("utf-8")).decode()
+    components.html(f"""
+        <style>
+          body {{ margin: 0; }}
+          a {{ display: inline-block; padding: 0.4rem 0.8rem; border-radius: 0.5rem; text-decoration: none;
+               border: 1px solid rgba(250, 250, 250, 0.2); background: #0F172A; color: #F1F5F9;
+               font: 400 0.95rem "Source Sans Pro", "Source Sans", system-ui, sans-serif; }}
+          a:hover {{ border-color: #38BDF8; color: #38BDF8; }}
+        </style>
+        <a download="{escape(file_name)}" href="data:text/csv;base64,{data}">{escape(label)}</a>""", height=44)
 
 
 # Data
