@@ -78,7 +78,6 @@ table = pd.DataFrame({
 st.markdown("<div style='height:0.8rem'></div>", unsafe_allow_html=True)
 st.dataframe(
     table.style.apply(lambda row: [LEVEL_ROW_STYLE.get(row["Incident level"], "")] * len(row), axis=1),
-    width="stretch", height=420, hide_index=True)
+    width="stretch", height=min(420, 38 + 35 * max(len(table), 1)), hide_index=True)
 
-st.download_button("Download these events as CSV", table.to_csv(index=False).encode("utf-8"),
-                   file_name=f"cyberpulse_{selected.id if selected else 'events'}.csv", mime="text/csv")
+ui.download_csv(table, f"cyberpulse_{selected.id if selected else 'events'}.csv", "Download these events as CSV")
