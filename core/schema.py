@@ -17,7 +17,7 @@ COLUMNS = [
     "user",      # account that did it, e.g. "priya@brightleaf.example"
     "ip",        # IP address it came from (203.0.113.x test range only)
     "device",    # device name, e.g. "PRIYA-LAPTOP"
-    "country",   # two-letter country code, e.g. "IN"
+    "country",   # country name, e.g. "India"
     "action",    # one of ACTIONS below
     "outcome",   # "success" or "failure"
     "target",    # what it touched: a file name, an email address or an account
@@ -75,15 +75,16 @@ class Employee:
     name: str
     device: str             # their usual laptop
     country: str            # where they usually work from
-    work_start: int = 9     # usual first working hour, 0-23
-    work_end: int = 18      # usual last working hour, 0-23
+    work_start: float = 9   # usual start of the working day, e.g. 9.5 = 09:30
+    work_end: float = 18    # usual end of the working day
     is_admin: bool = False  # allowed to give admin rights
     files_per_day: int = 50  # files they usually open or download in a day
 
 
 def to_frame(events) -> pd.DataFrame:
     """Turn events (LogEvent objects, dicts or a DataFrame) into a clean
-    DataFrame: every column present, times parsed, oldest first.
+    DataFrame: every column present, times parsed, oldest first. Extra
+    columns, such as the simulator's stage and note, are kept at the end.
 
     Raises ValueError when a required column is missing or an action,
     outcome or label is not one we agreed on.
@@ -117,7 +118,9 @@ def to_frame(events) -> pd.DataFrame:
     _check_values(df, "action", ACTIONS)
     _check_values(df, "outcome", OUTCOMES)
     _check_values(df, "label", LABELS)
-    return df[COLUMNS]
+    extras = [column for column in df.columns if column not in COLUMNS]
+    df[extras] = df[extras].fillna("")
+    return df[COLUMNS + extras]
 
 
 def _check_values(df, column, allowed):
